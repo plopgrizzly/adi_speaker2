@@ -1,0 +1,443 @@
+diff --git a/examples/music.rs b/examples/music.rs
+index c5e4c7d..3cab5c7 100644
+--- a/examples/music.rs
++++ b/examples/music.rs
+@@ -16,16 +16,24 @@ fn main() {
+ 	println!("Load Audio");
+ 
+ 	let music = Audio::create(include_bytes!("res/239_triumph.raw"));
++	let music2 = Audio::create(include_bytes!("res/197_DrownNoMore.raw"));
++//	let cowbell = Audio::create(include_bytes!("res/cowbell.raw"));
++	let trombone = Audio::create(include_bytes!("res/trombone.raw"));
++//	let vibraslap = Audio::create(include_bytes!("res/vibraslap.raw"));
+ 
+ 	println!("Start Music");
+ 
+-	speaker.play(&music, 60.0 * 8.40, 0.0);
++	speaker.play(&music, 0.0, 0.0); //60.0 * 8.40, 0.0);
+ 
+ 	println!("OK");
+ 
+-//	while speaker.is_playing(&music) {
+-	loop {
++	while speaker.is_playing(&music) {
+ 		speaker.update();
+ 	}
+-//	}
++
++	println!("Next....");
++
++	speaker.play(&music2, 60.0 * 0.8, 0.0);
++
++	loop { speaker.update(); }
+ }
+diff --git a/src/audio.rs b/src/audio.rs
+index 1475d5c..3deb444 100644
+--- a/src/audio.rs
++++ b/src/audio.rs
+@@ -4,26 +4,52 @@
+  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
+  */
+
+ pub struct Audio {
+-	buffer: Vec<u8>
++	buffer: Vec<i16>,
+	uuid: usize,
+ }
+ 
+ pub trait AudioReader {
+-	fn read(&self) -> &[u8];
++	fn read(&self) -> Vec<i16>;
+	fn uuid(&self) -> usize;
+ }
+ 
+ impl AudioReader for Audio {
+-	fn read(&self) -> &[u8] {
+-		self.buffer.as_slice()
++	fn read(&self) -> Vec<i16> {
++		self.buffer.clone()
++	}
+ }
+ 
+ impl Audio {
+ 	pub fn create(bytes: &[u8]) -> Audio {
+		let uuid = gen_uuid();
+ 		let mut buffer = Vec::new();
++		let samples = &bytes[0] as *const _ as *const i16;
++		let size = bytes.len() / 2;
++
++		buffer.resize(size, 0i16);
++
++		// read bytes as i16's
++		for i in 0..size {
++			buffer[i] = unsafe { *(samples.offset(i as isize)) };
++		}
+ 
+-		buffer.extend_from_slice(bytes);
++//		buffer.extend_from_slice(&bytes[0] as *const _ as *const i16);
+ 
+		Audio { buffer: buffer, uuid: uuid }
+ 	}
+ }
+diff --git a/src/ffi/mod.rs b/src/ffi/mod.rs
+index f0c66f8..bf1f69d 100644
+--- a/src/ffi/mod.rs
++++ b/src/ffi/mod.rs
+@@ -4,15 +4,6 @@
+  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
+  */
+ 
+-use HZ;
+-
+-const BUFFER_LEN : usize = HZ * 2 * 10; // 2 channels, 10 second buffer.
+-
+-#[repr(C)]
+-struct Buffer {
+-	data: [i16; BUFFER_LEN],
+-}
+-
+ type LazyPointer = usize;
+ 
+ mod pulse_audio;
+diff --git a/src/ffi/pulse_audio/context_create.rs b/src/ffi/pulse_audio/context_create.rs
+index 5ccc6e8..4801ed7 100644
+--- a/src/ffi/pulse_audio/context_create.rs
++++ b/src/ffi/pulse_audio/context_create.rs
+@@ -4,6 +4,7 @@
+  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
+  */
+ 
++use BUFFER_LEN;
+ use std::process;
+ use std::mem;
+ use std::ptr::null;
+@@ -73,11 +74,8 @@ struct Volume {
+ 
+ #[repr(C)]
+ pub struct Context {
+-	api: *mut MainLoopApi,
+-	pub data: *const u8,
+-	pub left: isize,
++	pub data: *const i16,
+ 	pub used: isize,
+-	pub context: LazyPointer,
+ }
+ 
+ extern {
+@@ -117,7 +115,7 @@ extern {
+ 	fn pa_xstrdup(s: *const i8) -> *const i8;
+ 	fn pa_xmalloc(l: usize) -> LazyPointer;
+ 	fn pa_xfree(p: LazyPointer) -> ();
+-	fn memcpy(dest: LazyPointer, src: *const u8, n: usize) -> LazyPointer;
++	fn memcpy(dest: LazyPointer, src: *const i16, n: usize) -> LazyPointer;
+ 	fn malloc(size: usize) -> *mut Context;
+ }
+ 
+@@ -131,37 +129,20 @@ const ADISPEAKER_SS : SampleSpec = SampleSpec {
+ extern "C" fn stream_write_callback(s: LazyPointer, length: usize,
+ 	context: *mut Context)
+ {
+-	let left = unsafe { (*context).left };
+-	let out_data = unsafe { pa_xmalloc(length) };
+-
+-	let (bytes, ended) = if left > length as isize {
+-		(length, false)
+-	} else {
+-		(left as usize, true)
+-	};
+-
+ 	unsafe {
+-		memcpy(out_data, (*context).data, bytes);
++		let out_data = pa_xmalloc(length);
+ 
+-		(*context).data = (*context).data.offset(bytes as isize);
+-		(*context).left -= bytes as isize;
+-		(*context).used += bytes as isize;
+-	}
++		memcpy(out_data, (*context).data, length);
+ 
+-	if unsafe { (*context).data.is_null() } {
+-		panic!("null data");
+-	}
++		(*context).used += length as isize;
+ 
+-	unsafe {
+-		pa_stream_write(s, out_data, bytes, pa_xfree, 0,
++		pa_stream_write(s, out_data, length, pa_xfree, 0,
+ 			SeekMode::Relative);
+ 	}
+ 
+-	if ended {
+-		println!("end!");
+-		process::exit(0);
++//	if ended {
+ //		pa_operation_unref(pa_stream_drain(s, stream_drain_complete, NULL));
+-	}
++//	}
+ }
+ 
+ /* This routine is called whenever the stream state changes */
+@@ -208,10 +189,6 @@ extern "C" fn context_state_callback(c: LazyPointer, context: *mut Context) {
+ 					pa_cvolume_set(&mut cv, 2, volume), 0);
+ 			}
+ 		},
+-		ContextState::Terminated => unsafe {
+-			println!("Terminate");
+-			((*(*context).api).quit)((*context).api, 0)
+-		},
+ 		_ => {
+ 			panic!("Connection Failed!");
+ 		},
+@@ -219,6 +196,7 @@ extern "C" fn context_state_callback(c: LazyPointer, context: *mut Context) {
+ }
+ 
+ pub fn context_create(connection: LazyPointer, name: &str) -> *mut Context {
++	let context;
+ 	let rtn = unsafe {
+ 		malloc(mem::size_of::<Context>())
+ 	};
+@@ -231,24 +209,25 @@ pub fn context_create(connection: LazyPointer, name: &str) -> *mut Context {
+ 	unsafe {
+ 		println!("Mainloop");
+ 
+-		(*rtn).api = pa_mainloop_get_api(connection);
++		let api = pa_mainloop_get_api(connection);
+ 
+ 		println!("CTX");
+ 
+-		(*rtn).context = pa_context_new((*rtn).api, name);
+-		println!("Made contxt {}", (*rtn).context);
++		context = pa_context_new(api, name);
+ 
+-		pa_context_set_state_callback((*rtn).context,
+-			context_state_callback, rtn);
++		pa_context_set_state_callback(context, context_state_callback,
++			rtn);
+ 
+-		(*rtn).data = null();
+-		(*rtn).left = 0;
++		*rtn = Context {
++			data: null(),
++			used: 0
++		};
+ 	};
+ 
+ 	println!("Connecting to Context");
+ 
+ 	if unsafe {
+-		pa_context_connect((*rtn).context, 0, ContextFlags::NoFlags, 0)
++		pa_context_connect(context, 0, ContextFlags::NoFlags, 0)
+ 	} < 0 {
+ 		panic!("Couldn't connect to context!");
+ 	}
+diff --git a/src/ffi/pulse_audio/mod.rs b/src/ffi/pulse_audio/mod.rs
+index 399f18c..a1a02a7 100644
+--- a/src/ffi/pulse_audio/mod.rs
++++ b/src/ffi/pulse_audio/mod.rs
+@@ -4,7 +4,7 @@
+  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
+  */
+ 
+-use super::{ LazyPointer, Buffer };
++use super::LazyPointer;
+ 
+ mod connection_create;
+ mod context_create;
+@@ -60,10 +60,9 @@ impl Speaker {
+ 		}
+ 	}
+ 
+-	pub fn play(&mut self, data: *const u8, left: isize) {
++	pub fn play(&mut self, data: *const i16) {
+ 		unsafe {
+ 			(*self.context).data = data;
+-			(*self.context).left = left;
+ 			(*self.context).used = 0;
+ 		}
+ 	}
+diff --git a/src/lib.rs b/src/lib.rs
+index 396eed3..66bdd3c 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -16,3 +16,4 @@ pub use audio::Audio;
+ pub use mixer::Mixer;
+ 
+ const HZ : usize = 44100;
++const BUFFER_LEN : usize = HZ * 2 * 10; // 2 channels, 10 second buffer.
+diff --git a/src/mixer.rs b/src/mixer.rs
+index f7a018e..e346940 100644
+--- a/src/mixer.rs
++++ b/src/mixer.rs
+@@ -10,13 +10,13 @@ const WAVE_MAX : f32 = i16::MAX as f32;
+ 
+ pub struct Mixer {
+ 	mixer: fn(f32, f32, isize) -> f32,
+-	buffer: Vec<i16>,
++//	buffer: Vec<i16>,
+ }
+ impl Mixer {
+ 	pub fn create(mixer: fn(f32, f32, isize) -> f32) -> Mixer {
+-		let buffer = Vec::new();
++//		let buffer = Vec::new();
+ 
+-		Mixer { mixer: mixer, buffer: buffer }
++		Mixer { mixer: mixer/*, buffer: buffer*/ }
+ 	}
+ 
+diff --git a/src/speaker.rs b/src/speaker.rs
+index 4d86653..c2edab8 100644
+--- a/src/speaker.rs
++++ b/src/speaker.rs
+@@ -9,21 +9,26 @@ use Audio;
+ use audio::AudioReader;
+ use Mixer;
+ use HZ;
++use BUFFER_LEN;
++
+ 
+ const HZF : f32 = HZ as f32;
+-const BUFFER_LEN : usize = HZ * 2 * 10; // 2 channels, 10 second buffer.
+ const SBUFFER_LEN : isize = BUFFER_LEN as isize;
+ 
+ struct Stream {
+-	data: *const i16,
++	data: Vec<i16>,
+ 	left: isize,
+-	curs: isize,
++	curs: usize,
+	uuid: usize,
+ //	size: isize,
+ }
+ impl Stream {
+ 	fn sample(&mut self) -> (i16, bool) {
+-		let data = if self.left > 0 /*&& self.left <= self.size*/ {
+-			unsafe { *(self.data.offset(self.curs)) }
++		let data = if self.left > 0 {
++			self.data[self.curs]
+ 		} else {
+ 			0
+ 		};
+@@ -36,20 +41,24 @@ impl Stream {
+ 
+ 	fn backtrack(&mut self) {
+ 		self.left += SBUFFER_LEN;
+-		self.curs -= SBUFFER_LEN;
++		self.curs -= BUFFER_LEN;
+ 	}
+ }
+ 
++#[repr(C)]
++struct NativeBuffer([i16; BUFFER_LEN]);
++
+ /** The computer/phone speakers or headphones. */
+ pub struct Speaker {
+ 	speaker: ffi::Speaker,
+-	buffer: Vec<i16>,
++	buffer: NativeBuffer,
++	sample: bool,
+ 	streams: Vec<Stream>,
+ }
+
+@@ -61,32 +70,30 @@ impl Speaker {
+ 	    ```
+ 	*/
+ 	pub fn create() -> Speaker {
+-		let mut buffer = Vec::new();
+-
+-		buffer.resize(BUFFER_LEN, 0i16);
+-
+ 		Speaker {
+ 			speaker: ffi::Speaker::create(),
+-			buffer: buffer,
++			buffer: NativeBuffer([0i16; BUFFER_LEN]),
+ 			streams: Vec::new(),
++			sample: true,
+ 		}
+ 	}
+ 
+ 	/** Play `audio` on the speaker, starting `seconds_in` seconds in and
+ 	    fading in for `fade` seconds. */
+ 	pub fn play(&mut self, audio: &Audio, seconds_in: f32, fade: f32) {
+-		// 2 channels * 2 bytes in S16 = 4.0
+-		let samples_in = (seconds_in * 4.0 * HZF) as isize;
++		// 2 channels in S16 = 2.0
++		let samples_in = (seconds_in * 2.0 * HZF) as isize;
+ 		let read = audio.read();
++		let size = read.len() as isize;
+ 
+ 		self.streams.push(Stream {
+-			data: unsafe { read.as_ptr().offset(samples_in) }
+-				as *const _,
+-			left: (read.len() as isize) - samples_in,
++			data: read,
++			left: size - samples_in,
+ 			curs: 0,
+			uuid: audio.uuid()
+ 		});
+ 
+-		self.buffer.clear();
++		self.sample = true;
+ 	}
+ 
+@@ -96,42 +103,59 @@ impl Speaker {
+ 
+ 
+ 	/** Update the speaker's audio buffer **/
+ 	pub fn update(&mut self) {
+-		if self.buffer.is_empty() {
++		if self.sample {
++			for i in 0..(self.streams.len()-1) {
++				self.streams[i].backtrack();
++			}
++
+ 			for i in 0..BUFFER_LEN {
+-				self.sample();
++				self.sample(i);
+ 			}
+ 		}
+ 
++		self.speaker.play(&self.buffer.0[0]);
++
+ 		let used = self.speaker.update() / 2;
++		let rest = BUFFER_LEN - (used as usize);
+ 
+-		let _: Vec<_> = self.buffer.drain(0..used as usize).collect();
++		extern {
++			fn memmove(dest: *const i16, src: *const i16, n: usize)
++				-> *const u8;
++		}
+ 
+-		for i in 0..used {
+-			self.sample();
++		unsafe {
++			memmove(&self.buffer.0[0],
++				&self.buffer.0[used as usize], rest);
+ 		}
+ 
+-		self.speaker.play(self.buffer.as_ptr() as *const _, SBUFFER_LEN); // TODO: move to create()
++		for i in rest..BUFFER_LEN {
++			self.sample(i);
++		}
+ 	}
+ 
+-	fn sample(&mut self) {
++	fn sample(&mut self, i: usize) {
+ 		let mut samples = Vec::new();
+ 
+ 		for i in 0..self.streams.len() {
+ 			let (sample, expired) = self.streams[i].sample();
+ 
++			samples.push((sample as f32) / WAVE_MAX);
+ 			if expired {
+-				println!("Expired");
++				println!("Expired {}", self.streams[i].uuid);
+ 				self.streams.remove(i);
+ 			}
+-
+-			samples.push(sample);
+ 		}
+ 
+-		self.buffer.push(Mixer::blend(samples) * WAVE_MAX) as i16);
++		self.buffer.0[i] = (Mixer::blend(samples) * WAVE_MAX) as i16;
+ 	}
+ }
