@@ -16,10 +16,13 @@ fn main() {
 	println!("Load Audio");
 
 	let music = Audio::create(include_bytes!("res/197_DrownNoMore.raw"));
+	let cowbell = Audio::create(include_bytes!("res/cowbell.raw"));
+	let trombone = Audio::create(include_bytes!("res/A.raw"));
+	let vibraslap = Audio::create(include_bytes!("res/vibraslap.raw"));
 
 	println!("Start Music");
 
-	speaker.play(&music, 60.0 * 0.975, 0.0);
+/*	speaker.play(&music, 60.0 * 0.975, 0.0);
 
 	println!("OK");
 
@@ -27,5 +30,22 @@ fn main() {
 		speaker.update();
 	}
 
-	println!("Done");
+	println!("Done");*/
+
+/*	speaker.play(&music, 60.0 * 0.975, 0.0);
+
+	while speaker.is_playing(&music) {
+		speaker.update();
+	}*/
+
+	println!("trombone");
+
+	speaker.play(&trombone, 0.0, 0.0);
+	while speaker.is_playing(&trombone) { speaker.update(); }
+/*
+	speaker.play(&trombone, 0.0, 0.0);
+	while speaker.is_playing(&trombone) { speaker.update(); }
+
+	speaker.play(&vibraslap, 0.0, 0.0);
+	while speaker.is_playing(&vibraslap) { speaker.update(); }*/
 }

@@ -10,6 +10,7 @@ use audio::AudioReader;
 use Mixer;
 use HZ;
 use std::i16;
+use std::mem;
 
 const HZF : f32 = HZ as f32;
 const BUFFER_LEN : usize = HZ * 2 * 10; // 2 channels, 10 second buffer.
@@ -17,7 +18,7 @@ const SBUFFER_LEN : isize = BUFFER_LEN as isize;
 const WAVE_MAX : f32 = i16::MAX as f32;
 
 struct Stream {
-	data: *const i16,
+	data: Vec<u8>,
 	left: isize,
 	curs: isize,
 	uuid: usize,
@@ -25,16 +26,21 @@ struct Stream {
 }
 impl Stream {
 	fn sample(&mut self) -> (i16, bool) {
-		let data = if self.left > 0 /*&& self.left <= self.size*/ {
-			unsafe { *(self.data.offset(self.curs)) }
+		let data = if (self.curs as usize) < self.data.len() {
+			let a = [self.data[self.curs as usize],
+				self.data[self.curs as usize + 1]];
+
+			unsafe {
+				mem::transmute::<[u8; 2], i16>(a)
+			}
 		} else {
 			0
 		};
 
-		self.left -= 1;
-		self.curs += 1;
+		self.left -= 2;
+		self.curs += 2;
 
-		(data, self.left <= -SBUFFER_LEN / 2)
+		(data, (self.curs as usize) >= self.data.len() + (BUFFER_LEN*2))
 	}
 
 	fn backtrack(&mut self) {
@@ -74,14 +80,14 @@ impl Speaker {
 	/** Play `audio` on the speaker, starting `seconds_in` seconds in and
 	    fading in for `fade` seconds. */
 	pub fn play(&mut self, audio: &Audio, seconds_in: f32, fade: f32) {
-		// 2 channels * 2 bytes in S16 = 4.0
-		let samples_in = (seconds_in * 4.0 * HZF) as isize;
+		// 2 channels = 2.0
+		let samples_in = (seconds_in * 2.0 * HZF) as isize;
 		let read = audio.read();
+		let size = read.len() as isize;
 
 		self.streams.push(Stream {
-			data: unsafe { read.as_ptr().offset(samples_in) }
-				as *const _,
-			left: (read.len() as isize) - samples_in,
+			data: read,
+			left: size - samples_in,
 			curs: 0,
 			uuid: audio.uuid()
 		});

@@ -12,13 +12,13 @@ pub struct Audio {
 }
 
 pub trait AudioReader {
-	fn read(&self) -> &[u8];
+	fn read(&self) -> Vec<u8>;
 	fn uuid(&self) -> usize;
 }
 
 impl AudioReader for Audio {
-	fn read(&self) -> &[u8] {
-		self.buffer.as_slice()
+	fn read(&self) -> Vec<u8> {
+		self.buffer.clone()
 	}
 
 	fn uuid(&self) -> usize {
@@ -35,7 +35,7 @@ fn gen_uuid() -> usize {
 }
 
 impl Audio {
-	pub fn create(bytes: &[u8]) -> Audio {
+	pub fn create(bytes: &'static [u8]) -> Audio {
 		let uuid = gen_uuid();
 		let mut buffer = Vec::new();
 
