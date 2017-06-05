@@ -4,66 +4,44 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
+use ami::void_pointer::*;
 // use core::ops::{ Index, IndexMut };
 use std::ops::{ Index, IndexMut };
+use std::slice;
 
-static mut UUID : usize = 0;
-
-pub struct Audio {
-	buffer: Vec<u8>,
-	uuid: usize,
-}
-
-pub trait AudioReader {
-	fn read(&self) -> Vec<u8>;
-	fn uuid(&self) -> usize;
-	fn len(&self) -> usize;
-}
-
-impl AudioReader for Audio {
-	fn read(&self) -> Vec<u8> {
-		self.buffer.clone()
-	}
-
-	fn uuid(&self) -> usize {
-		self.uuid
-	}
-
-	// Get the number of bytes
-	fn len(&self) -> usize {
-		self.buffer.len()
-	}
-}
-
-fn gen_uuid() -> usize {
-	unsafe {
-		let uuid = UUID;
-		UUID += 1;
-		uuid
- 	}
-}
+pub struct Audio(Vec<i16>);
 
 impl Audio {
 	pub fn create(bytes: &'static [u8]) -> Audio {
-		let uuid = gen_uuid();
-		let mut buffer = Vec::new();
+		let nsamples = bytes.len() / 2;
+		let samples = bytes as *const _ as *const i16;
+		let data = unsafe { slice::from_raw_parts(samples, nsamples) };
 
-		buffer.extend_from_slice(bytes);
+		let mut buffer = Vec::with_capacity(nsamples);
 
-		Audio { buffer: buffer, uuid: uuid }
+		unsafe {
+			buffer.set_len(nsamples);
+		}
+		buffer[0..nsamples].clone_from_slice(data);
+
+		Audio(buffer)
+	}
+
+	pub fn len(&self) -> usize {
+		self.0.len()
 	}
 }
 
 impl Index<usize> for Audio {
-	type Output = u8;
+	type Output = i16;
 
-	fn index(&self, i: usize) -> &u8 {
-		&self.buffer[i]
+	fn index(&self, i: usize) -> &Self::Output {
+		&self.0[i]
 	}
 }
 
 impl IndexMut<usize> for Audio {
-	fn index_mut(&mut self, i: usize) -> &mut u8 {
-		&mut self.buffer[i]
+	fn index_mut(&mut self, i: usize) -> &mut Self::Output {
+		&mut self.0[i]
 	}
 }

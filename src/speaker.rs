@@ -9,7 +9,6 @@ use std::ops::Range;
 
 use ffi;
 use Audio;
-use audio::AudioReader;
 use Mixer;
 use HZ;
 use std::i16;
@@ -24,26 +23,20 @@ struct Stream<'a> {
 	data: &'a Audio,
 	left: isize,
 	curs: isize,
-	uuid: usize,
 //	size: isize,
 }
 impl<'a> Stream<'a> {
 	fn sample(&mut self) -> (i16, bool) {
 		let data = if (self.curs as usize) < self.data.len() {
-			let a = [self.data[self.curs as usize],
-				self.data[self.curs as usize + 1]];
-
-			unsafe {
-				mem::transmute::<[u8; 2], i16>(a)
-			}
+			self.data[self.curs as usize]
 		} else {
 			0
 		};
 
-		self.left -= 2;
-		self.curs += 2;
+		self.left -= 1;
+		self.curs += 1;
 
-		(data, (self.curs as usize) >= self.data.len() + (BUFFER_LEN*2))
+		(data, (self.curs as usize) >= self.data.len() + BUFFER_LEN)
 	}
 
 	fn backtrack(&mut self) {
@@ -102,14 +95,12 @@ impl<'a> Speaker<'a> {
 	pub fn play(&mut self, audio: &'a Audio, seconds_in: f32, fade: f32) {
 		// 2 channels = 2.0
 		let samples_in = (seconds_in * 2.0 * HZF) as isize;
-		let read = audio.read();
-		let size = read.len() as isize;
+		let size = audio.len() as isize;
 
 		self.streams.push(Stream {
 			data: audio,
 			left: size - samples_in,
 			curs: 0,
-			uuid: audio.uuid()
 		});
 
 		self.buffer.clear();
@@ -124,7 +115,7 @@ impl<'a> Speaker<'a> {
 	/** Returns true if `audio` is being played, and false otherwise */
 	pub fn is_playing(&self, audio: &Audio) -> bool {
 		for stream in &self.streams {
-			if stream.uuid == audio.uuid() {
+			if stream.data as *const _ == audio as *const _ {
 				return true;
 			}
 		}

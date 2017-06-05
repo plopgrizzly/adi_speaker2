@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["Jeron Aldaron Lau <jeron.lau@plopgrizzly.tech>"]
 
 [dependencies]
+ami = "0.2.0"
