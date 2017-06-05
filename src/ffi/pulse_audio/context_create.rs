@@ -4,6 +4,8 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
+use Mixer;
+
 use std::process;
 use std::mem;
 use std::ptr::null;
@@ -72,12 +74,10 @@ struct Volume {
 }
 
 #[repr(C)]
-pub struct Context {
+pub struct Context<'a> {
 	api: *mut MainLoopApi,
-	pub data: *const u8,
-	pub left: isize,
-	pub used: isize,
 	pub context: LazyPointer,
+	pub mixer: Mixer<'a>,
 }
 
 extern {
@@ -115,7 +115,7 @@ extern {
 		seek: SeekMode) -> ();
 
 	fn pa_xstrdup(s: *const i8) -> *const i8;
-	fn pa_xmalloc(l: usize) -> *const i16;
+	fn pa_xmalloc(l: usize) -> *mut i16;
 	fn pa_xfree(p: LazyPointer) -> ();
 	fn memcpy(dest: *const i16, src: *const u8, n: usize) -> LazyPointer;
 	fn malloc(size: usize) -> *mut Context;
@@ -147,20 +147,27 @@ pub static mut ADISPEAKER_BUFFER : [i16; BUFFER_LEN] = [0; BUFFER_LEN];//*const 
 extern "C" fn stream_write_callback(s: LazyPointer, length: usize,
 	context: *mut Context)
 {
-	let left = unsafe { (*context).left };
-
-	if left <= length as isize {
-		panic!("Buffer Underrun!");
-	}
+//	let left = unsafe { (*context).left };
+//
+//	if left <= length as isize {
+//		panic!("Buffer Underrun!");
+//	}
 
 	let out_data = unsafe { pa_xmalloc(length) };
 
-	unsafe {
-		memcpy(out_data, /*&ADISPEAKER_BUFFER[0]*/(*context).data, length);
-
-		(*context).left -= length as isize;
-		(*context).used += length as isize;
+	for i in 0..(length/2) {
+		unsafe {
+			(*out_data.wrapping_offset(i as isize)) =
+				(*context).mixer.update();
+		}
 	}
+
+//	unsafe {
+//		memcpy(out_data, /*&ADISPEAKER_BUFFER[0]*/(*context).data, length);
+//
+//		(*context).left -= length as isize;
+//		(*context).used += length as isize;
+//	}
 
 	unsafe {
 		pa_stream_write(s, out_data, length, pa_xfree, 0,
@@ -222,7 +229,9 @@ extern "C" fn context_state_callback(c: LazyPointer, context: *mut Context) {
 	}
 }
 
-pub fn context_create(connection: LazyPointer, name: &str) -> *mut Context {
+pub fn context_create<'a>(connection: LazyPointer, name: &str, mixer: Mixer<'a>)
+	-> *mut Context<'a>
+{
 	let rtn = unsafe {
 		malloc(mem::size_of::<Context>())
 	};
@@ -233,6 +242,8 @@ pub fn context_create(connection: LazyPointer, name: &str) -> *mut Context {
 	println!("Creating Context");
 
 	unsafe {
+		(*rtn).mixer = mixer;
+
 		println!("Mainloop");
 
 		(*rtn).api = pa_mainloop_get_api(connection);
@@ -244,8 +255,6 @@ pub fn context_create(connection: LazyPointer, name: &str) -> *mut Context {
 
 		pa_context_set_state_callback((*rtn).context,
 			context_state_callback, rtn);
-
-		(*rtn).left = 0;
 	};
 
 	println!("Connecting to Context");

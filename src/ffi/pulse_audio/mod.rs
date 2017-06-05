@@ -4,6 +4,9 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
+use Mixer;
+use Audio;
+
 use super::{ LazyPointer, Buffer, BUFFER_LEN };
 
 mod connection_create;
@@ -35,24 +38,24 @@ impl Drop for Connection {
 }
 
 use self::context_create::Context;
-impl Context {
-	fn create(connection: &Connection) -> *mut Context {
+impl<'a> Context<'a> {
+	fn create(connection: &Connection, mixer: Mixer<'a>) -> *mut Context<'a> {
 		let c = connection.native;
 
-		context_create::context_create(c, NAME)
+		context_create::context_create(c, NAME, mixer)
 	}
 }
 
-pub struct Speaker {
+pub struct Speaker<'a> {
 	connection: Connection,
-	context: *mut Context,
+	context: *mut Context<'a>,
 	
 }
-impl Speaker {
-	pub fn create() -> Speaker {
+impl<'a> Speaker<'a> {
+	pub fn create(mixer: Mixer<'a>) -> Speaker<'a> {
 		SampleSpec::create();
 		let connection = Connection::create();
-		let context = Context::create(&connection);
+		let context = Context::create(&connection, mixer);
 
 		Speaker {
 			connection: connection,
@@ -60,24 +63,19 @@ impl Speaker {
 		}
 	}
 
-	pub fn play(&mut self, data: *const u8, /*[i16; BUFFER_LEN], */left: isize) {
+	pub fn add_stream(&mut self, audio: &'a Audio) {
 		unsafe {
-//			context_create::ADISPEAKER_BUFFER = data;
-			(*self.context).data = data;
-			(*self.context).left = left;
-			(*self.context).used = 0;
+			(*self.context).mixer.add_stream(audio);
 		}
 	}
 
-	pub fn update(&mut self) -> isize {
-		context_update::context_update(self.connection.native);
-
+	pub fn is_playing(&self, audio: &'a Audio) -> bool {
 		unsafe {
-			let used = (*self.context).used;
-
-			(*self.context).used = 0;
-
-			used
+			(*self.context).mixer.is_playing(audio)
 		}
+	}
+
+	pub fn update(&mut self) -> () {
+		context_update::context_update(self.connection.native);
 	}
 }
