@@ -9,6 +9,8 @@ extern crate adi_speaker;
 use adi_speaker::{ Speaker, Audio };
 
 fn main() {
+	let trombone = Audio::create(include_bytes!("res/197_DrownNoMore.raw"));
+
 	println!("Open Speaker");
 
 	let mut speaker = Speaker::create();
@@ -17,7 +19,6 @@ fn main() {
 
 	let music = Audio::create(include_bytes!("res/197_DrownNoMore.raw"));
 	let cowbell = Audio::create(include_bytes!("res/cowbell.raw"));
-	let trombone = Audio::create(include_bytes!("res/A.raw"));
 	let vibraslap = Audio::create(include_bytes!("res/vibraslap.raw"));
 
 	println!("Start Music");
@@ -38,7 +39,7 @@ fn main() {
 		speaker.update();
 	}*/
 
-	println!("trombone");
+	println!("vibraslappy");
 
 	speaker.play(&trombone, 0.0, 0.0);
 	while speaker.is_playing(&trombone) { speaker.update(); }

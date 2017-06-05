@@ -4,7 +4,7 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
-use super::{ LazyPointer, Buffer };
+use super::{ LazyPointer, Buffer, BUFFER_LEN };
 
 mod connection_create;
 mod context_create;
@@ -60,8 +60,9 @@ impl Speaker {
 		}
 	}
 
-	pub fn play(&mut self, data: *const u8, left: isize) {
+	pub fn play(&mut self, data: *const u8, /*[i16; BUFFER_LEN], */left: isize) {
 		unsafe {
+//			context_create::ADISPEAKER_BUFFER = data;
 			(*self.context).data = data;
 			(*self.context).left = left;
 			(*self.context).used = 0;

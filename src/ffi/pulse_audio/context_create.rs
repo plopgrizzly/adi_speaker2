@@ -8,7 +8,7 @@ use std::process;
 use std::mem;
 use std::ptr::null;
 use std::ffi::CString;
-use super::{ LazyPointer, SampleSpec, Format };
+use super::{ LazyPointer, SampleSpec, Format, BUFFER_LEN };
 
 #[repr(C)]
 enum ContextFlags {
@@ -110,14 +110,14 @@ extern {
 	fn pa_cvolume_set(a: *mut Volume, channels: u32, v: u32) -> LazyPointer;
 
 	fn pa_stream_get_state(p: LazyPointer) -> StreamState;
-	fn pa_stream_write(p: LazyPointer, data: LazyPointer, nbytes: usize,
+	fn pa_stream_write(p: LazyPointer, data: *const i16, nbytes: usize,
 		free_cb: unsafe extern "C" fn(p: LazyPointer) -> (), offset: i64,
-		seek: SeekMode);
+		seek: SeekMode) -> ();
 
 	fn pa_xstrdup(s: *const i8) -> *const i8;
-	fn pa_xmalloc(l: usize) -> LazyPointer;
+	fn pa_xmalloc(l: usize) -> *const i16;
 	fn pa_xfree(p: LazyPointer) -> ();
-	fn memcpy(dest: LazyPointer, src: *const u8, n: usize) -> LazyPointer;
+	fn memcpy(dest: *const i16, src: *const u8, n: usize) -> LazyPointer;
 	fn malloc(size: usize) -> *mut Context;
 }
 
@@ -127,40 +127,44 @@ const ADISPEAKER_SS : SampleSpec = SampleSpec {
 	channels: 2,
 };
 
+macro_rules! veci16_placeholder {
+	() => {
+		&0 as *const _ as *const Vec<i16>
+	};
+}
+
+macro_rules! u8_placeholder {
+	() => {
+		&0 as *const _ as *const u8
+	};
+}
+
+// pub static mut ADISPEAKER_BUFFER : *const Vec<i16> = veci16_placeholder!();
+
+pub static mut ADISPEAKER_BUFFER : [i16; BUFFER_LEN] = [0; BUFFER_LEN];//*const u8 = u8_placeholder!();
+
 /* This is called whenever new data may be written to the stream */
 extern "C" fn stream_write_callback(s: LazyPointer, length: usize,
 	context: *mut Context)
 {
 	let left = unsafe { (*context).left };
+
+	if left <= length as isize {
+		panic!("Buffer Underrun!");
+	}
+
 	let out_data = unsafe { pa_xmalloc(length) };
 
-	let (bytes, ended) = if left > length as isize {
-		(length, false)
-	} else {
-		(left as usize, true)
-	};
-
 	unsafe {
-		memcpy(out_data, (*context).data, bytes);
+		memcpy(out_data, /*&ADISPEAKER_BUFFER[0]*/(*context).data, length);
 
-		(*context).data = (*context).data.offset(bytes as isize);
-		(*context).left -= bytes as isize;
-		(*context).used += bytes as isize;
-	}
-
-	if unsafe { (*context).data.is_null() } {
-		panic!("null data");
+		(*context).left -= length as isize;
+		(*context).used += length as isize;
 	}
 
 	unsafe {
-		pa_stream_write(s, out_data, bytes, pa_xfree, 0,
+		pa_stream_write(s, out_data, length, pa_xfree, 0,
 			SeekMode::Relative);
-	}
-
-	if ended {
-		println!("end!");
-		process::exit(0);
-//		pa_operation_unref(pa_stream_drain(s, stream_drain_complete, NULL));
 	}
 }
 
@@ -241,7 +245,6 @@ pub fn context_create(connection: LazyPointer, name: &str) -> *mut Context {
 		pa_context_set_state_callback((*rtn).context,
 			context_state_callback, rtn);
 
-		(*rtn).data = null();
 		(*rtn).left = 0;
 	};
 

@@ -4,6 +4,9 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
+// use core::ops::{ Index, IndexMut };
+use std::ops::{ Index, IndexMut };
+
 static mut UUID : usize = 0;
 
 pub struct Audio {
@@ -14,6 +17,7 @@ pub struct Audio {
 pub trait AudioReader {
 	fn read(&self) -> Vec<u8>;
 	fn uuid(&self) -> usize;
+	fn len(&self) -> usize;
 }
 
 impl AudioReader for Audio {
@@ -23,6 +27,11 @@ impl AudioReader for Audio {
 
 	fn uuid(&self) -> usize {
 		self.uuid
+	}
+
+	// Get the number of bytes
+	fn len(&self) -> usize {
+		self.buffer.len()
 	}
 }
 
@@ -42,5 +51,19 @@ impl Audio {
 		buffer.extend_from_slice(bytes);
 
 		Audio { buffer: buffer, uuid: uuid }
+	}
+}
+
+impl Index<usize> for Audio {
+	type Output = u8;
+
+	fn index(&self, i: usize) -> &u8 {
+		&self.buffer[i]
+	}
+}
+
+impl IndexMut<usize> for Audio {
+	fn index_mut(&mut self, i: usize) -> &mut u8 {
+		&mut self.buffer[i]
 	}
 }
