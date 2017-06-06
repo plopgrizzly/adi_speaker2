@@ -15,6 +15,6 @@ pub use speaker::Speaker;
 pub use audio::Audio;
 pub use mixer::Mixer;
 
-const HZ : usize = 44100;
+const HZ : u32 = 44100;
 
 pub extern crate ami;

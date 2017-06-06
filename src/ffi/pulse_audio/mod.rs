@@ -4,10 +4,9 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
+use ami::void_pointer::*;
 use Mixer;
 use Audio;
-
-use super::{ LazyPointer, Buffer, BUFFER_LEN };
 
 mod connection_create;
 mod context_create;
@@ -25,7 +24,7 @@ impl SampleSpec {
 	}
 }
 
-pub struct Connection { native: LazyPointer }
+pub struct Connection { native: VoidPointer }
 impl Connection {
 	fn create() -> Connection {
 		Connection { native: connection_create::connection_create() }

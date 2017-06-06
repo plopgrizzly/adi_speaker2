@@ -4,14 +4,14 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
-use super::LazyPointer;
+use ami::void_pointer::*;
 
 extern {
-	fn pa_mainloop_iterate(m: LazyPointer, block: i32, retval: *mut i8)
+	fn pa_mainloop_iterate(m: VoidPointer, block: i32, retval: *mut i8)
 		-> i32;
 }
 
-pub fn context_update(m: LazyPointer) {
+pub fn context_update(m: VoidPointer) {
 	let mut ret = 1;
 
 	unsafe {

@@ -4,25 +4,13 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
-use std::ptr::copy;
-use std::ops::Range;
-
 use ffi;
 use Audio;
 use Mixer;
-use HZ;
-use std::i16;
-use std::mem;
-
-const HZF : f32 = HZ as f32;
-const BUFFER_LEN : usize = HZ * 2 * 10; // 2 channels, 10 second buffer.
-const SBUFFER_LEN : isize = BUFFER_LEN as isize;
-const WAVE_MAX : f32 = i16::MAX as f32;
 
 /** The computer/phone speakers or headphones. */
 pub struct Speaker<'a> {
-	speaker: ffi::Speaker<'a>,
-//	buffer: [i16; BUFFER_LEN],
+	speaker: ffi::Speaker<'a>
 }
 
 impl<'a> Speaker<'a> {
@@ -36,13 +24,9 @@ impl<'a> Speaker<'a> {
 	*/
 	pub fn create() -> Speaker<'a> {
 		let mixer = Mixer::create(Mixer::mixer_blend);
-		let mut buffer = Vec::new();
+		let speaker = ffi::Speaker::create(mixer);
 
-		buffer.resize(BUFFER_LEN, 0i16);
-
-		Speaker {
-			speaker: ffi::Speaker::create(mixer),
-		}
+		Speaker { speaker: speaker }
 	}
 
 	/** Play `audio` on the speaker, starting `seconds_in` seconds in and

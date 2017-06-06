@@ -4,13 +4,13 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
+use ami::void_pointer::*;
 use Mixer;
+use HZ;
 
-use std::process;
 use std::mem;
-use std::ptr::null;
 use std::ffi::CString;
-use super::{ LazyPointer, SampleSpec, Format, BUFFER_LEN };
+use super::{ SampleSpec, Format };
 
 #[repr(C)]
 enum ContextFlags {
@@ -51,19 +51,19 @@ enum SeekMode {
 
 #[repr(C)]
 pub struct MainLoopApi {
-	userdata: LazyPointer,
-	io_new: LazyPointer,
-	io_enable: LazyPointer,
-	io_free: LazyPointer,
-	io_set_destroy: LazyPointer,
-	time_new: LazyPointer,
-	time_restart: LazyPointer,
-	time_free: LazyPointer,
-	time_set_destroy: LazyPointer,
-	defer_new: LazyPointer,
-	defer_enable: LazyPointer,
-	defer_free: LazyPointer,
-	defer_set_destroy: LazyPointer,
+	userdata: VoidPointer,
+	io_new: VoidPointer,
+	io_enable: VoidPointer,
+	io_free: VoidPointer,
+	io_set_destroy: VoidPointer,
+	time_new: VoidPointer,
+	time_restart: VoidPointer,
+	time_free: VoidPointer,
+	time_set_destroy: VoidPointer,
+	defer_new: VoidPointer,
+	defer_enable: VoidPointer,
+	defer_free: VoidPointer,
+	defer_set_destroy: VoidPointer,
 	quit: unsafe extern "C" fn(a: *mut MainLoopApi, retval: i32) -> (),
 }
 
@@ -73,78 +73,67 @@ struct Volume {
 	values: [u32; 32]
 }
 
+
 #[repr(C)]
 pub struct Context<'a> {
 	api: *mut MainLoopApi,
-	pub context: LazyPointer,
+	pub context: VoidPointer,
 	pub mixer: Mixer<'a>,
 }
 
+// Allow improper_ctypes for Context because the struct's use is for callbacks.
+#[allow(improper_ctypes)]
 extern {
-	fn pa_mainloop_get_api(m: LazyPointer) -> *mut MainLoopApi;
-	fn pa_context_new(mainloop: *mut MainLoopApi, name: *const i8)
-		-> LazyPointer;
 	fn pa_context_set_state_callback(
-		c: LazyPointer,
-		cb: extern "C" fn(c: LazyPointer, userdata: *mut Context) -> (),
+		c: VoidPointer,
+		cb: extern "C" fn(c: VoidPointer, userdata: *mut Context) -> (),
 		userdata: *mut Context) -> ();
-	fn pa_context_get_state(c: LazyPointer) -> ContextState;
-	fn pa_context_connect(c: LazyPointer, server: LazyPointer,
-		flags: ContextFlags, api: LazyPointer) -> i32;
-	fn pa_stream_new(c: LazyPointer, name: *const i8, ss: *const SampleSpec,
-		map: LazyPointer) -> LazyPointer;
-
-	fn pa_stream_set_state_callback(s: LazyPointer,
-		cb: extern "C" fn(s: LazyPointer, userdata: LazyPointer) -> (),
-		userdata: LazyPointer) -> ();
-	fn pa_stream_set_write_callback(p: LazyPointer,
+	fn pa_stream_set_write_callback(p: VoidPointer,
 		cb: extern "C" fn(
-			p: LazyPointer,
+			p: VoidPointer,
 			nbytes: usize,
 			userdata: *mut Context) -> (),
 		userdata: *mut Context) -> ();
-	fn pa_stream_connect_playback(s: LazyPointer, dev: LazyPointer,
-		attr: LazyPointer, flags: StreamFlags, volume: LazyPointer,
-		sync_stream: LazyPointer) -> i32;
-	// cvolume
-	fn pa_cvolume_set(a: *mut Volume, channels: u32, v: u32) -> LazyPointer;
+	fn malloc(size: usize) -> *mut Context;
+}
 
-	fn pa_stream_get_state(p: LazyPointer) -> StreamState;
-	fn pa_stream_write(p: LazyPointer, data: *const i16, nbytes: usize,
-		free_cb: unsafe extern "C" fn(p: LazyPointer) -> (), offset: i64,
+extern {
+	fn pa_mainloop_get_api(m: VoidPointer) -> *mut MainLoopApi;
+	fn pa_context_new(mainloop: *mut MainLoopApi, name: *const i8)
+		-> VoidPointer;
+	fn pa_context_get_state(c: VoidPointer) -> ContextState;
+	fn pa_context_connect(c: VoidPointer, server: VoidPointer,
+		flags: ContextFlags, api: VoidPointer) -> i32;
+	fn pa_stream_new(c: VoidPointer, name: *const i8, ss: *const SampleSpec,
+		map: VoidPointer) -> VoidPointer;
+
+	fn pa_stream_set_state_callback(s: VoidPointer,
+		cb: extern "C" fn(s: VoidPointer, userdata: VoidPointer) -> (),
+		userdata: VoidPointer) -> ();
+	fn pa_stream_connect_playback(s: VoidPointer, dev: VoidPointer,
+		attr: VoidPointer, flags: StreamFlags, volume: VoidPointer,
+		sync_stream: VoidPointer) -> i32;
+	// cvolume
+	fn pa_cvolume_set(a: *mut Volume, channels: u32, v: u32) -> VoidPointer;
+
+	fn pa_stream_get_state(p: VoidPointer) -> StreamState;
+	fn pa_stream_write(p: VoidPointer, data: *const i16, nbytes: usize,
+		free_cb: unsafe extern "C" fn(p: VoidPointer) -> (), offset: i64,
 		seek: SeekMode) -> ();
 
 	fn pa_xstrdup(s: *const i8) -> *const i8;
 	fn pa_xmalloc(l: usize) -> *mut i16;
-	fn pa_xfree(p: LazyPointer) -> ();
-	fn memcpy(dest: *const i16, src: *const u8, n: usize) -> LazyPointer;
-	fn malloc(size: usize) -> *mut Context;
+	fn pa_xfree(p: VoidPointer) -> ();
 }
 
 const ADISPEAKER_SS : SampleSpec = SampleSpec {
 	format: Format::SampleS16LE,
-	rate: 44100,
+	rate: HZ,
 	channels: 2,
 };
 
-macro_rules! veci16_placeholder {
-	() => {
-		&0 as *const _ as *const Vec<i16>
-	};
-}
-
-macro_rules! u8_placeholder {
-	() => {
-		&0 as *const _ as *const u8
-	};
-}
-
-// pub static mut ADISPEAKER_BUFFER : *const Vec<i16> = veci16_placeholder!();
-
-pub static mut ADISPEAKER_BUFFER : [i16; BUFFER_LEN] = [0; BUFFER_LEN];//*const u8 = u8_placeholder!();
-
 /* This is called whenever new data may be written to the stream */
-extern "C" fn stream_write_callback(s: LazyPointer, length: usize,
+extern "C" fn stream_write_callback(s: VoidPointer, length: usize,
 	context: *mut Context)
 {
 //	let left = unsafe { (*context).left };
@@ -176,7 +165,7 @@ extern "C" fn stream_write_callback(s: LazyPointer, length: usize,
 }
 
 /* This routine is called whenever the stream state changes */
-extern "C" fn stream_state_callback(s: LazyPointer, _: LazyPointer) {
+extern "C" fn stream_state_callback(s: VoidPointer, _: VoidPointer) {
 	match unsafe { pa_stream_get_state(s) } {
 		StreamState::Creating | StreamState::Terminated
 			| StreamState::Ready => { /* do nothing */ }
@@ -184,7 +173,7 @@ extern "C" fn stream_state_callback(s: LazyPointer, _: LazyPointer) {
 	}
 }
 
-extern "C" fn context_state_callback(c: LazyPointer, context: *mut Context) {
+extern "C" fn context_state_callback(c: VoidPointer, context: *mut Context) {
 	let volume = 65536; // TODO
 
 	match unsafe { pa_context_get_state(c) } {
@@ -197,10 +186,10 @@ extern "C" fn context_state_callback(c: LazyPointer, context: *mut Context) {
 			let name = unsafe { pa_xstrdup(name.as_ptr()) };
 
 			let stream = unsafe {
-				pa_stream_new(c, name, &ADISPEAKER_SS, 0)
+				pa_stream_new(c, name, &ADISPEAKER_SS, NULL)
 			};
 
-			if stream == 0 {
+			if stream == NULL {
 				panic!("Couldn't create stream!");
 			}
 
@@ -211,12 +200,12 @@ extern "C" fn context_state_callback(c: LazyPointer, context: *mut Context) {
 
 			unsafe {
 				pa_stream_set_state_callback(stream,
-					stream_state_callback, 0);
+					stream_state_callback, NULL);
 				pa_stream_set_write_callback(stream,
 					stream_write_callback, context);
-				pa_stream_connect_playback(stream, 0, 0,
+				pa_stream_connect_playback(stream, NULL, NULL,
 					StreamFlags::NoFlags,
-					pa_cvolume_set(&mut cv, 2, volume), 0);
+					pa_cvolume_set(&mut cv, 2, volume), NULL);
 			}
 		},
 		ContextState::Terminated => unsafe {
@@ -229,7 +218,7 @@ extern "C" fn context_state_callback(c: LazyPointer, context: *mut Context) {
 	}
 }
 
-pub fn context_create<'a>(connection: LazyPointer, name: &str, mixer: Mixer<'a>)
+pub fn context_create<'a>(connection: VoidPointer, name: &str, mixer: Mixer<'a>)
 	-> *mut Context<'a>
 {
 	let rtn = unsafe {
@@ -260,7 +249,8 @@ pub fn context_create<'a>(connection: LazyPointer, name: &str, mixer: Mixer<'a>)
 	println!("Connecting to Context");
 
 	if unsafe {
-		pa_context_connect((*rtn).context, 0, ContextFlags::NoFlags, 0)
+		pa_context_connect((*rtn).context, NULL, ContextFlags::NoFlags,
+			NULL)
 	} < 0 {
 		panic!("Couldn't connect to context!");
 	}

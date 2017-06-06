@@ -4,18 +4,18 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
-use super::LazyPointer;
+use ami::void_pointer::*;
 
 extern {
-	fn pa_mainloop_new() -> LazyPointer;
+	fn pa_mainloop_new() -> VoidPointer;
 }
 
-pub fn connection_create() -> LazyPointer {
+pub fn connection_create() -> VoidPointer {
 	let connection = unsafe {
 		pa_mainloop_new()
 	};
 
-	if connection == 0 {
+	if connection == NULL {
 		panic!("Couldn't connect to speakers!");
 	}
 

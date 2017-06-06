@@ -46,6 +46,7 @@ impl<'a> Mixer<'a> {
 		let mut vec_expires = Vec::with_capacity(0);
 		let mut i = 0;
 
+		// Get a sample from each stream and put it in a vector.
 		for stream in &mut self.streams {
 			let (sample, expired) = stream.update();
 
@@ -58,6 +59,7 @@ impl<'a> Mixer<'a> {
 			i += 1;
 		}
 
+		// If any sounds have finished playing, remove their streams.
 		if vec_expires.is_empty() == false {
 			vec_expires.reverse();
 
@@ -69,39 +71,26 @@ impl<'a> Mixer<'a> {
 		((self.mixer)(vec_samples) * WAVE_MAX) as i16
 	}
 
-/*	pub fn execute(&self, buffer: i16, input: i16, curs: isize) -> i16 {
-		let buffer : f32 = ( buffer as f32 ) / WAVE_MAX;
-		let input : f32 = ( input as f32 ) / WAVE_MAX;
-		let output = (self.mixer)(buffer, input, curs);
-
-		if output >= 1.0 {
-			i16::MAX
-		} else if output <= -1.0 {
-			i16::MIN
-		} else {
-			(output * WAVE_MAX) as i16
-		}
-	}*/
-
-	/** Mix a few samples into one. */
-	pub fn blend(samples: Vec<f32>) -> f32 {
+	/// Mix a vector of samples into one sample.
+	pub fn mixer_blend(samples: Vec<f32>) -> f32 {
 		if samples.is_empty() {
 			return 0.0;
 		} else if samples.len() == 1 {
 			return samples[0];
 		}
 
-		let mut z = (samples[0] + 1.0) / 2.0; // 0.0 - 1.0
+//		let mut z = (samples[0] + 1.0) / 2.0; // 0.0 - 1.0
+		let mut z = samples[0];
 
-//		for i in 1..samples.len() {
-//			let y = samples[i];
-//
-//			z = (z + y) - (z * y);
-//		}
+		for i in 1..samples.len() {
+			let y = samples[i];
+
+			z = (z + y) - (z * y);
+		}
 
 		// Algorithm adopted from
 		// http://www.vttoth.com/CMS/index.php/technical-notes/68
-		for i in 1..samples.len() {
+/*		for i in 1..samples.len() {
 			let y = samples[i];
 
 			if z < 0.5 && y < 0.5 {
@@ -109,13 +98,9 @@ impl<'a> Mixer<'a> {
 			} else {
 				z = (2.0 * (z + y)) - (2.0 * (z * y)) - 1.0;
 			}
-		}
+		}*/
 
-		(z * 2.0) - 1.0 // -1.0 - 1.0
-	}
-
-	pub fn mixer_blend(samples: Vec<f32>) -> f32 {
-//		println!("blend {}!", samples.len());
-		Mixer::blend(samples)
+//		(z * 2.0) - 1.0 // -1.0 - 1.0
+		z
 	}
 }

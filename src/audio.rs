@@ -4,7 +4,6 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
-use ami::void_pointer::*;
 // use core::ops::{ Index, IndexMut };
 use std::ops::{ Index, IndexMut };
 use std::slice;
