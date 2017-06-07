@@ -57,11 +57,35 @@ impl<'a> Speaker<'a> {
 
 impl Settings {
 	pub fn transform(self, speaker: &mut Speaker,
-		run: fn(&mut f32, &Audio, usize, f32) -> (), range: (f32, f32))
-			-> Settings
+		run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
+		range: (f32, f32)) -> Settings
 	{
 		speaker.speaker.transform(run, range);
 
 		self
+	}
+
+	pub fn fade_in(self, speaker: &mut Speaker, range: (f32, f32))
+		-> Settings
+	{
+		self.transform(speaker, Box::new(move |out, audio, index, animate| {
+			*out = audio.sample(index) * animate;
+		}), range)
+	}
+
+	pub fn fade_out(self, speaker: &mut Speaker, range: (f32, f32))
+		-> Settings
+	{
+		self.transform(speaker, Box::new(move |out, audio, index, animate| {
+			*out = audio.sample(index) * (1.0 - animate);
+		}), range)
+	}
+
+	pub fn volume(self, speaker: &mut Speaker, range: (f32, f32), vol: f32)
+		-> Settings
+	{
+		self.transform(speaker, Box::new(move |out, audio, index, _| {
+			*out = audio.sample(index) * vol;
+		}), range)
 	}
 }

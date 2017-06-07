@@ -8,10 +8,6 @@ extern crate adi_speaker;
 
 use adi_speaker::{ Speaker, Audio };
 
-fn tf(out: &mut f32, audio: &Audio, index: usize, animate: f32) {
-	*out = audio.sample(index) / 10.0;
-}
-
 fn main() {
 	println!("Load Audio");
 
@@ -44,7 +40,7 @@ fn main() {
 
 	println!("vibraslappy");
 
-	speaker.play(&trombone).transform(&mut speaker, tf, (0.0, 10.0));
+	speaker.play(&trombone).fade_in(&mut speaker, (0.0, 10.0));
 	while speaker.is_playing(&trombone) { speaker.update(); }
 /*
 	speaker.play(&trombone, 0.0, 0.0);

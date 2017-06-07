@@ -69,7 +69,8 @@ impl<'a> Speaker<'a> {
 		}
 	}
 
-	pub fn transform(&mut self, run: fn(&mut f32, &Audio, usize, f32) -> (),
+	pub fn transform(&mut self,
+		run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
 		range: (f32, f32))
 	{
 		unsafe {

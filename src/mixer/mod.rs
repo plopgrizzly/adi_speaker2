@@ -32,7 +32,8 @@ impl<'a> Mixer<'a> {
 	}
 
 	/// Add a transform to the last created stream.
-	pub fn transform(&mut self, run: fn(&mut f32, &Audio, usize, f32) -> (),
+	pub fn transform(&mut self,
+		run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
 		range: (f32, f32))
 	{
 		let hz = HZ as f32;

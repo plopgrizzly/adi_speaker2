@@ -7,7 +7,7 @@
 use Audio;
 
 pub struct Transform {
-	run: fn(&mut f32, &Audio, usize, f32) -> (),
+	run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
 	range: (usize, f32),
 }
 
@@ -45,7 +45,8 @@ impl<'a> Stream<'a> {
 		(sample, self.curs == self.audio.len())
 	}
 
-	pub fn transform(&mut self, run: fn(&mut f32, &Audio, usize, f32) -> (),
+	pub fn transform(&mut self,
+		run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
 		range: (usize, usize)) -> ()
 	{
 		let transform = Transform {
