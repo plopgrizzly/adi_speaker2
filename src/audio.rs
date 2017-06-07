@@ -7,6 +7,9 @@
 // use core::ops::{ Index, IndexMut };
 use std::ops::{ Index, IndexMut };
 use std::slice;
+use std::i16;
+
+const WAVE_MAX : f32 = i16::MAX as f32;
 
 pub struct Audio(Vec<i16>);
 
@@ -28,6 +31,11 @@ impl Audio {
 
 	pub fn len(&self) -> usize {
 		self.0.len()
+	}
+
+	/// Sample the audio at index `i`
+	pub fn sample(&self, i: usize) -> f32 {
+		self[i] as f32 / WAVE_MAX
 	}
 }
 

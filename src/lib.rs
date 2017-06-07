@@ -14,6 +14,7 @@ mod mixer;
 pub use speaker::Speaker;
 pub use audio::Audio;
 pub use mixer::Mixer;
+pub use mixer::Stream;
 
 const HZ : u32 = 44100;
 

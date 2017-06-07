@@ -8,10 +8,14 @@ extern crate adi_speaker;
 
 use adi_speaker::{ Speaker, Audio };
 
+fn tf(out: &mut f32, audio: &Audio, index: usize, animate: f32) {
+	*out = audio.sample(index) / 10.0;
+}
+
 fn main() {
 	println!("Load Audio");
 
-	let trombone = Audio::create(include_bytes!("res/vibraslap.raw"));
+	let trombone = Audio::create(include_bytes!("res/197_DrownNoMore.raw"));
 //	let music = Audio::create(include_bytes!("res/197_DrownNoMore.raw"));
 //	let cowbell = Audio::create(include_bytes!("res/cowbell.raw"));
 //	let vibraslap = Audio::create(include_bytes!("res/vibraslap.raw"));
@@ -40,7 +44,7 @@ fn main() {
 
 	println!("vibraslappy");
 
-	speaker.play(&trombone, 0.0, 0.0);
+	speaker.play(&trombone).transform(&mut speaker, tf, (0.0, 10.0));
 	while speaker.is_playing(&trombone) { speaker.update(); }
 /*
 	speaker.play(&trombone, 0.0, 0.0);

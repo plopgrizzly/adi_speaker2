@@ -4,12 +4,13 @@
  * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
  */
 
-use Audio;
-
 mod stream;
 
-use self::stream::Stream;
+use HZ;
+use Audio;
 use std::i16;
+
+pub use self::stream::Stream;
 
 const WAVE_MAX : f32 = i16::MAX as f32;
 
@@ -28,6 +29,16 @@ impl<'a> Mixer<'a> {
 	/// Add a stream to the `Mixer`.
 	pub fn add_stream(&mut self, audio: &'a Audio) {
 		self.streams.push(Stream::create(audio));
+	}
+
+	/// Add a transform to the last created stream.
+	pub fn transform(&mut self, run: fn(&mut f32, &Audio, usize, f32) -> (),
+		range: (f32, f32))
+	{
+		let hz = HZ as f32;
+		let range = ((range.0 * hz) as usize, (range.1 * hz) as usize);
+
+		self.streams.last_mut().unwrap().transform(run, range)
 	}
 
 	/// Returns true if audio is on one of the streams.
@@ -54,7 +65,7 @@ impl<'a> Mixer<'a> {
 				vec_expires.push(i);
 			}
 
-			vec_samples.push(sample as f32 / WAVE_MAX);
+			vec_samples.push(sample);
 
 			i += 1;
 		}

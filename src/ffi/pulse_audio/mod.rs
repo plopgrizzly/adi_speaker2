@@ -7,6 +7,7 @@
 use ami::void_pointer::*;
 use Mixer;
 use Audio;
+use Stream;
 
 mod connection_create;
 mod context_create;
@@ -64,7 +65,15 @@ impl<'a> Speaker<'a> {
 
 	pub fn add_stream(&mut self, audio: &'a Audio) {
 		unsafe {
-			(*self.context).mixer.add_stream(audio);
+			(*self.context).mixer.add_stream(audio)
+		}
+	}
+
+	pub fn transform(&mut self, run: fn(&mut f32, &Audio, usize, f32) -> (),
+		range: (f32, f32))
+	{
+		unsafe {
+			(*self.context).mixer.transform(run, range)
 		}
 	}
 

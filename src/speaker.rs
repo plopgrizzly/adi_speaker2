@@ -7,6 +7,9 @@
 use ffi;
 use Audio;
 use Mixer;
+use Stream;
+
+pub struct Settings;
 
 /** The computer/phone speakers or headphones. */
 pub struct Speaker<'a> {
@@ -31,8 +34,9 @@ impl<'a> Speaker<'a> {
 
 	/** Play `audio` on the speaker, starting `seconds_in` seconds in and
 	    fading in for `fade` seconds. */
-	pub fn play(&mut self, audio: &'a Audio, seconds_in: f32, fade: f32) {
+	pub fn play(&mut self, audio: &'a Audio) -> Settings {
 		self.speaker.add_stream(audio);
+		Settings
 	}
 
 	/** Stop the playback of `audio`, fading out for fade seconds */
@@ -48,5 +52,16 @@ impl<'a> Speaker<'a> {
 	/** Update the speaker's audio buffer **/
 	pub fn update(&mut self) -> () {
 		self.speaker.update();
+	}
+}
+
+impl Settings {
+	pub fn transform(self, speaker: &mut Speaker,
+		run: fn(&mut f32, &Audio, usize, f32) -> (), range: (f32, f32))
+			-> Settings
+	{
+		speaker.speaker.transform(run, range);
+
+		self
 	}
 }
