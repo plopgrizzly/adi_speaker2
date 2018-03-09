@@ -1,8 +1,6 @@
-/*
- * adi_speaker - Aldaron's Device Interface
- * Speaker - "audio.rs"
- * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
- */
+// audio.rs -- Aldaron's Device Interface / Speaker
+// Copyright (c) 2017  Jeron A. Lau <jeron.lau@plopgrizzly.com>
+// Licensed under the MIT LICENSE
 
 // use core::ops::{ Index, IndexMut };
 use std::ops::{ Index, IndexMut };
@@ -11,7 +9,7 @@ use std::i16;
 
 const WAVE_MAX : f32 = i16::MAX as f32;
 
-pub struct Audio(Vec<i16>);
+pub struct Audio(Vec<i16>, isize);
 
 impl Audio {
 	pub fn create(bytes: &'static [u8]) -> Audio {
@@ -26,16 +24,20 @@ impl Audio {
 		}
 		buffer[0..nsamples].clone_from_slice(data);
 
-		Audio(buffer)
+		Audio(buffer, nsamples as isize)
 	}
 
-	pub fn len(&self) -> usize {
-		self.0.len()
+	pub fn len(&self) -> isize {
+		self.1
 	}
 
 	/// Sample the audio at index `i`
-	pub fn sample(&self, i: usize) -> f32 {
-		self[i] as f32 / WAVE_MAX
+	pub fn sample(&self, i: isize) -> f32 {
+		if i >= 0 {
+			self[i as usize] as f32 / WAVE_MAX
+		} else {
+			0.0
+		}
 	}
 }
 

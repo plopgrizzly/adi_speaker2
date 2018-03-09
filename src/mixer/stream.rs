@@ -1,19 +1,17 @@
-/*
- * adi_speaker - Aldaron's Device Interface
- * Speaker - "mixer/stream.rs"
- * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
- */
+// mixer/stream.rs -- Aldaron's Device Interface / Speaker
+// Copyright (c) 2017  Jeron A. Lau <jeron.lau@plopgrizzly.com>
+// Licensed under the MIT LICENSE
 
 use Audio;
 
 pub struct Transform {
-	run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
-	range: (usize, f32),
+	run: Box<Fn(&mut f32, &Audio, isize, f32) -> ()>,
+	range: (isize, f32),
 }
 
 pub struct Stream<'a> {
 	audio: &'a Audio,
-	curs: usize,
+	curs: isize,
 	transforms: Vec<Transform>,
 }
 
@@ -46,12 +44,12 @@ impl<'a> Stream<'a> {
 	}
 
 	pub fn transform(&mut self,
-		run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
+		run: Box<Fn(&mut f32, &Audio, isize, f32) -> ()>,
 		range: (usize, usize)) -> ()
 	{
 		let transform = Transform {
 			run: run,
-			range: (range.0, (range.1 - range.0) as f32),
+			range: (range.0 as isize, (range.1 - range.0) as f32),
 		};
 
 		self.transforms.push(transform);

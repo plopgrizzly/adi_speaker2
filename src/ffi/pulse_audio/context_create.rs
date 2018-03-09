@@ -1,9 +1,8 @@
-/*
- * adi_speaker - Aldaron's Device Interface
- * Speaker - "ffi/pulse_audio/context_create.rs"
- * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
- */
+// ffi/pulse_audio/context_create.rs -- Aldaron's Device Interface / Speaker
+// Copyright (c) 2017-2018  Jeron A. Lau <jeron.lau@plopgrizzly.com>
+// Licensed under the MIT LICENSE
 
+use libc;
 use ami::void_pointer::*;
 use Mixer;
 use HZ;
@@ -94,7 +93,6 @@ extern {
 			nbytes: usize,
 			userdata: *mut Context) -> (),
 		userdata: *mut Context) -> ();
-	fn malloc(size: usize) -> *mut Context;
 }
 
 extern {
@@ -221,8 +219,8 @@ extern "C" fn context_state_callback(c: VoidPointer, context: *mut Context) {
 pub fn context_create<'a>(connection: VoidPointer, name: &str, mixer: Mixer<'a>)
 	-> *mut Context<'a>
 {
-	let rtn = unsafe {
-		malloc(mem::size_of::<Context>())
+	let rtn : *mut Context = unsafe {
+		mem::transmute(libc::malloc(mem::size_of::<Context>()))
 	};
 
 	let name = CString::new(name).unwrap();

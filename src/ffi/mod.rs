@@ -1,8 +1,6 @@
-/*
- * adi_speaker - Aldaron's Device Interface
- * Speaker - "ffi/mod.rs"
- * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
- */
+// ffi/mod.rs -- Aldaron's Device Interface / Speaker
+// Copyright (c) 2017  Jeron A. Lau <jeron.lau@plopgrizzly.com>
+// Licensed under the MIT LICENSE
 
 mod pulse_audio;
 

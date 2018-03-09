@@ -1,8 +1,6 @@
-/*
- * adi_speaker - Aldaron's Device Interface
- * Speaker - "mixer/mod.rs"
- * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
- */
+// mixer/mod.rs -- Aldaron's Device Interface / Speaker
+// Copyright (c) 2017  Jeron A. Lau <jeron.lau@plopgrizzly.com>
+// Licensed under the MIT LICENSE
 
 mod stream;
 
@@ -33,7 +31,7 @@ impl<'a> Mixer<'a> {
 
 	/// Add a transform to the last created stream.
 	pub fn transform(&mut self,
-		run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
+		run: Box<Fn(&mut f32, &Audio, isize, f32) -> ()>,
 		range: (f32, f32))
 	{
 		let hz = HZ as f32;

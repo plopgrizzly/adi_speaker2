@@ -40,7 +40,11 @@ fn main() {
 
 	println!("vibraslappy");
 
-	speaker.play(&trombone).fade_in(&mut speaker, (0.0, 10.0));
+	speaker.play(&trombone);
+//		.volume(&mut speaker, (0.0, 5.0), 0.0)
+//		.fade_in(&mut speaker, (0.0, 10.0))
+//		.fade_out(&mut speaker, (0.0, 10.0));
+//		.echo(&mut speaker, (0.0, 10.0), (0.5, 1.0));
 	while speaker.is_playing(&trombone) { speaker.update(); }
 /*
 	speaker.play(&trombone, 0.0, 0.0);

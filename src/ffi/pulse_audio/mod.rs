@@ -1,8 +1,6 @@
-/*
- * adi_speaker - Aldaron's Device Interface
- * Speaker - "ffi/pulse_audio/mod.rs"
- * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
- */
+// ffi/pulse_audio/mod.rs -- Aldaron's Device Interface / Speaker
+// Copyright (c) 2017  Jeron A. Lau <jeron.lau@plopgrizzly.com>
+// Licensed under the MIT LICENSE
 
 use ami::void_pointer::*;
 use Mixer;
@@ -70,7 +68,7 @@ impl<'a> Speaker<'a> {
 	}
 
 	pub fn transform(&mut self,
-		run: Box<Fn(&mut f32, &Audio, usize, f32) -> ()>,
+		run: Box<Fn(&mut f32, &Audio, isize, f32) -> ()>,
 		range: (f32, f32))
 	{
 		unsafe {

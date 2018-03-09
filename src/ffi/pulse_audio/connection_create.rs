@@ -1,8 +1,6 @@
-/*
- * adi_speaker - Aldaron's Device Interface
- * Speaker - "ffi/pulse_audio/connection_create.rs"
- * Copyright 2017 (c) Jeron Lau - Licensed under the MIT LICENSE
- */
+// ffi/pulse_audio/connection_create.rs -- Aldaron's Device Interface / Speaker
+// Copyright (c) 2017  Jeron A. Lau <jeron.lau@plopgrizzly.com>
+// Licensed under the MIT LICENSE
 
 use ami::void_pointer::*;
 

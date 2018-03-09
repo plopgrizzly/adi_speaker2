@@ -1,7 +1,39 @@
+# Cargo.toml -- Aldaron's Device Interface / Speaker
+# Copyright (c) 2017-2018  Jeron A. Lau <jeron.lau@plopgrizzly.com>
+# Licensed under the MIT LICENSE
+#                             _        _
+#                            /@\——————/@\
+# .———  .                   |   o    o   |     .————      .            .
+# |   | |  .———   .———   .——.     []     .——.  |      .——    ———: ———: | .   .
+# |   | |  |   |  |   |  \   \   <##>   /   /  |      |   |    /    /  | |   |
+# |———  |  |   |  |   |   |   ¯        ¯   |   |   -- |   |   /    /   |  \ /
+# |     |  |   |  |———    |                |   |    | |   |  /    /    |   |
+# |     |   ———   |       |                |    ————  |   | :——— :———  |   |
+#                 |        \              /                              __/
+#                           ¯————————————¯
+
 [package]
 name = "adi_speaker"
 version = "0.1.0"
-authors = ["Jeron Aldaron Lau <jeron.lau@plopgrizzly.tech>"]
+authors = [
+	"Jeron Aldaron Lau <jeron.lau@plopgrizzly.com>"
+]
+
+license = "MIT"
+documentation = "https://docs.rs/adi_speaker"
+homepage = "http://plopgrizzly.com/adi_speaker"
+repository = "https://github.com/plopgrizzly/adi_speaker"
+
+# readme = "README.md"
+description = "A platform-agnostic library for playing & making sound."
+keywords = [ "speaker", "audio", "player", "sound", "music" ]
+categories = ["hardware-support", "multimedia::audio"]
+
+exclude = [
+	"examples/*", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", ".gitignore",
+	"_config.yml", "ISSUE_TEMPLATE.md", "icon.png", "icon.ico"
+]
 
 [dependencies]
 ami = "0.2.1" # { path = "" }
+libc = "^0.2"
